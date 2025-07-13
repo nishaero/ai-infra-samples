@@ -1,7 +1,0 @@
-{
-  "model_id": "mistralai/Mistral-7B-Instruct-v0.2",
-  "source": "huggingface",
-  "version": "v1.0.0",
-  "description": "Default instruct model for demo",
-  "updated_at": "2025-07-12T18:51:23Z"
-}
