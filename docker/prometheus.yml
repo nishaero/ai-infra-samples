@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Climate Prediction API
+  - job_name: 'climate-api'
+    static_configs:
+      - targets: ['climate-api:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # MLflow (if it exposes metrics)
+  - job_name: 'mlflow'
+    static_configs:
+      - targets: ['mlflow:5000']
+    metrics_path: '/metrics'
+    scrape_interval: 60s
