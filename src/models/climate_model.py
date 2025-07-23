@@ -1,34 +1,27 @@
-"""Climate Prediction Models.
+"""Simplified Climate Prediction Models.
 
-This module contains ML models for climate temperature prediction,
-including ensemble methods and time series forecasting.
+This module contains basic ML models for climate temperature prediction
+with simple ensemble approach for learning purposes.
 """
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import cross_val_score, TimeSeriesSplit
-import xgboost as xgb
-import lightgbm as lgb
 
 logger = logging.getLogger(__name__)
 
 
-class ClimatePredictor:
-    """Ensemble model for climate temperature prediction."""
+class SimpleClimatePredictor:
+    """Simple ensemble model for climate temperature prediction."""
 
-    def __init__(
-        self,
-        model_dir: str = "models",
-        random_state: int = 42
-    ):
+    def __init__(self, model_dir: str = "models", random_state: int = 42):
         """Initialize climate predictor.
         
         Args:
@@ -39,68 +32,32 @@ class ClimatePredictor:
         self.model_dir.mkdir(parents=True, exist_ok=True)
         self.random_state = random_state
         
-        # Initialize base models
+        # Initialize simple models
         self.models = {
             "linear": LinearRegression(),
-            "ridge": Ridge(random_state=random_state),
             "random_forest": RandomForestRegressor(
-                n_estimators=100,
+                n_estimators=50,
                 max_depth=10,
                 random_state=random_state,
                 n_jobs=-1
-            ),
-            "gradient_boosting": GradientBoostingRegressor(
-                n_estimators=100,
-                max_depth=6,
-                random_state=random_state
-            ),
-            "xgboost": xgb.XGBRegressor(
-                n_estimators=100,
-                max_depth=6,
-                random_state=random_state,
-                n_jobs=-1
-            ),
-            "lightgbm": lgb.LGBMRegressor(
-                n_estimators=100,
-                max_depth=6,
-                random_state=random_state,
-                n_jobs=-1,
-                verbose=-1
             )
         }
         
-        # Ensemble weights (will be learned during training)
-        self.ensemble_weights = None
         self.is_fitted = False
         
-    def fit(
-        self,
-        X: pd.DataFrame,
-        y: pd.Series,
-        validation_split: float = 0.2
-    ) -> Dict[str, Any]:
-        """Train the ensemble model.
+    def fit(self, X: pd.DataFrame, y: pd.Series) -> Dict[str, Any]:
+        """Train the simple ensemble model.
         
         Args:
             X: Feature matrix
             y: Target values
-            validation_split: Fraction of data to use for validation
             
         Returns:
             Training results and metrics
         """
-        logger.info("Training climate prediction ensemble model")
-        
-        # Split data chronologically for time series
-        split_idx = int(len(X) * (1 - validation_split))
-        X_train, X_val = X.iloc[:split_idx], X.iloc[split_idx:]
-        y_train, y_val = y.iloc[:split_idx], y.iloc[split_idx:]
-        
-        logger.info(f"Training set: {len(X_train)} samples")
-        logger.info(f"Validation set: {len(X_val)} samples")
+        logger.info("Training simple climate prediction model")
         
         # Train individual models
-        model_predictions = {}
         model_scores = {}
         
         for name, model in self.models.items():
@@ -108,122 +65,42 @@ class ClimatePredictor:
             
             try:
                 # Fit model
-                model.fit(X_train, y_train)
+                model.fit(X, y)
                 
                 # Make predictions
-                train_pred = model.predict(X_train)
-                val_pred = model.predict(X_val)
-                
-                # Store predictions for ensemble
-                model_predictions[name] = val_pred
+                predictions = model.predict(X)
                 
                 # Calculate metrics
-                train_mae = mean_absolute_error(y_train, train_pred)
-                val_mae = mean_absolute_error(y_val, val_pred)
-                val_rmse = np.sqrt(mean_squared_error(y_val, val_pred))
-                val_r2 = r2_score(y_val, val_pred)
+                mae = mean_absolute_error(y, predictions)
+                rmse = np.sqrt(mean_squared_error(y, predictions))
+                r2 = r2_score(y, predictions)
                 
                 model_scores[name] = {
-                    "train_mae": train_mae,
-                    "val_mae": val_mae,
-                    "val_rmse": val_rmse,
-                    "val_r2": val_r2
+                    "mae": mae,
+                    "rmse": rmse,
+                    "r2": r2
                 }
                 
-                logger.info(f"{name} - Val MAE: {val_mae:.4f}, Val RMSE: {val_rmse:.4f}, Val R2: {val_r2:.4f}")
+                logger.info(f"{name} - MAE: {mae:.4f}, RMSE: {rmse:.4f}, R2: {r2:.4f}")
                 
             except Exception as e:
                 logger.error(f"Error training {name}: {e}")
                 # Remove failed model
                 del self.models[name]
         
-        # Learn ensemble weights based on validation performance
-        if model_predictions:
-            self._learn_ensemble_weights(model_predictions, y_val)
-        
-        # Calculate ensemble predictions
-        ensemble_pred = self._ensemble_predict_from_individual(model_predictions)
-        ensemble_mae = mean_absolute_error(y_val, ensemble_pred)
-        ensemble_rmse = np.sqrt(mean_squared_error(y_val, ensemble_pred))
-        ensemble_r2 = r2_score(y_val, ensemble_pred)
-        
-        logger.info(f"Ensemble - Val MAE: {ensemble_mae:.4f}, Val RMSE: {ensemble_rmse:.4f}, Val R2: {ensemble_r2:.4f}")
-        
         self.is_fitted = True
         
-        # Prepare results
+        # Return results
         results = {
             "model_scores": model_scores,
-            "ensemble_scores": {
-                "val_mae": ensemble_mae,
-                "val_rmse": ensemble_rmse,
-                "val_r2": ensemble_r2
-            },
-            "ensemble_weights": self.ensemble_weights,
             "n_features": X.shape[1],
-            "training_samples": len(X_train),
-            "validation_samples": len(X_val)
+            "training_samples": len(X)
         }
         
         return results
     
-    def _learn_ensemble_weights(
-        self,
-        model_predictions: Dict[str, np.ndarray],
-        y_true: pd.Series
-    ) -> None:
-        """Learn optimal ensemble weights.
-        
-        Args:
-            model_predictions: Dictionary of model predictions
-            y_true: True target values
-        """
-        # Simple strategy: weight by inverse MAE
-        weights = {}
-        total_inverse_mae = 0
-        
-        for name, pred in model_predictions.items():
-            mae = mean_absolute_error(y_true, pred)
-            inverse_mae = 1.0 / (mae + 1e-8)  # Add small constant to avoid division by zero
-            weights[name] = inverse_mae
-            total_inverse_mae += inverse_mae
-        
-        # Normalize weights
-        self.ensemble_weights = {
-            name: weight / total_inverse_mae 
-            for name, weight in weights.items()
-        }
-        
-        logger.info(f"Ensemble weights: {self.ensemble_weights}")
-    
-    def _ensemble_predict_from_individual(
-        self,
-        model_predictions: Dict[str, np.ndarray]
-    ) -> np.ndarray:
-        """Create ensemble predictions from individual model predictions.
-        
-        Args:
-            model_predictions: Dictionary of model predictions
-            
-        Returns:
-            Ensemble predictions
-        """
-        if not self.ensemble_weights:
-            # Equal weights if no weights learned
-            weights = {name: 1.0 / len(model_predictions) for name in model_predictions.keys()}
-        else:
-            weights = self.ensemble_weights
-        
-        ensemble_pred = np.zeros(len(next(iter(model_predictions.values()))))
-        
-        for name, pred in model_predictions.items():
-            if name in weights:
-                ensemble_pred += weights[name] * pred
-        
-        return ensemble_pred
-    
     def predict(self, X: pd.DataFrame) -> np.ndarray:
-        """Make predictions using the ensemble model.
+        """Make predictions using simple ensemble (average).
         
         Args:
             X: Feature matrix
@@ -235,81 +112,35 @@ class ClimatePredictor:
             raise ValueError("Model must be fitted before making predictions")
         
         # Get predictions from all models
-        model_predictions = {}
+        all_predictions = []
+        
         for name, model in self.models.items():
             try:
-                model_predictions[name] = model.predict(X)
+                pred = model.predict(X)
+                all_predictions.append(pred)
             except Exception as e:
                 logger.warning(f"Error in prediction with {name}: {e}")
         
-        # Create ensemble prediction
-        ensemble_pred = self._ensemble_predict_from_individual(model_predictions)
+        # Simple average ensemble
+        if all_predictions:
+            ensemble_pred = np.mean(all_predictions, axis=0)
+        else:
+            raise RuntimeError("No models available for prediction")
         
         return ensemble_pred
     
     def get_feature_importance(self) -> Dict[str, np.ndarray]:
-        """Get feature importance from tree-based models.
+        """Get feature importance from random forest model.
         
         Returns:
             Dictionary of feature importances
         """
         importance_dict = {}
         
-        tree_models = ["random_forest", "gradient_boosting", "xgboost", "lightgbm"]
-        
-        for name in tree_models:
-            if name in self.models and hasattr(self.models[name], "feature_importances_"):
-                importance_dict[name] = self.models[name].feature_importances_
+        if "random_forest" in self.models:
+            importance_dict["random_forest"] = self.models["random_forest"].feature_importances_
         
         return importance_dict
-    
-    def cross_validate(
-        self,
-        X: pd.DataFrame,
-        y: pd.Series,
-        cv_folds: int = 5
-    ) -> Dict[str, Dict[str, float]]:
-        """Perform cross-validation on individual models.
-        
-        Args:
-            X: Feature matrix
-            y: Target values
-            cv_folds: Number of CV folds
-            
-        Returns:
-            Cross-validation scores
-        """
-        logger.info(f"Performing {cv_folds}-fold cross-validation")
-        
-        # Use TimeSeriesSplit for time series data
-        tscv = TimeSeriesSplit(n_splits=cv_folds)
-        
-        cv_results = {}
-        
-        for name, model in self.models.items():
-            logger.info(f"Cross-validating {name}")
-            
-            try:
-                # Perform cross-validation
-                scores = cross_val_score(
-                    model, X, y, 
-                    cv=tscv, 
-                    scoring="neg_mean_absolute_error",
-                    n_jobs=-1
-                )
-                
-                cv_results[name] = {
-                    "mean_mae": -scores.mean(),
-                    "std_mae": scores.std(),
-                    "scores": -scores
-                }
-                
-                logger.info(f"{name} CV MAE: {-scores.mean():.4f} (+/- {scores.std() * 2:.4f})")
-                
-            except Exception as e:
-                logger.error(f"Error in cross-validation for {name}: {e}")
-        
-        return cv_results
     
     def save_model(self, filename: str) -> None:
         """Save the trained model.
@@ -324,7 +155,6 @@ class ClimatePredictor:
         
         model_data = {
             "models": self.models,
-            "ensemble_weights": self.ensemble_weights,
             "is_fitted": self.is_fitted,
             "random_state": self.random_state
         }
@@ -346,17 +176,13 @@ class ClimatePredictor:
         model_data = joblib.load(model_path)
         
         self.models = model_data["models"]
-        self.ensemble_weights = model_data["ensemble_weights"]
         self.is_fitted = model_data["is_fitted"]
         self.random_state = model_data.get("random_state", 42)
         
         logger.info(f"Model loaded from {model_path}")
 
 
-def evaluate_model(
-    y_true: np.ndarray,
-    y_pred: np.ndarray
-) -> Dict[str, float]:
+def evaluate_model(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
     """Evaluate model performance.
     
     Args:
@@ -369,8 +195,7 @@ def evaluate_model(
     return {
         "mae": mean_absolute_error(y_true, y_pred),
         "rmse": np.sqrt(mean_squared_error(y_true, y_pred)),
-        "r2": r2_score(y_true, y_pred),
-        "mape": np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+        "r2": r2_score(y_true, y_pred)
     }
 
 
@@ -379,7 +204,7 @@ def main() -> None:
     # Generate sample data for testing
     np.random.seed(42)
     n_samples = 1000
-    n_features = 10
+    n_features = 6
     
     X = pd.DataFrame(
         np.random.randn(n_samples, n_features),
@@ -391,7 +216,7 @@ def main() -> None:
     )
     
     # Initialize and train model
-    predictor = ClimatePredictor()
+    predictor = SimpleClimatePredictor()
     results = predictor.fit(X, y)
     
     # Make predictions

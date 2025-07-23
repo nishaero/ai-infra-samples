@@ -30,8 +30,8 @@ from src.api.schemas import (
     ModelInfo,
     HealthCheck
 )
-from src.models.climate_model import ClimatePredictor
-from src.monitoring.metrics import ModelMonitor
+from src.models.climate_model import SimpleClimatePredictor
+from src.monitoring.metrics import SimpleModelMonitor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -63,7 +63,7 @@ app.add_middleware(
 # Global model instance
 model: Optional[ClimatePredictor] = None
 model_info: Dict = {}
-monitor: Optional[ModelMonitor] = None
+monitor: Optional[SimpleModelMonitor] = None
 
 
 class ModelManager:
@@ -94,7 +94,7 @@ class ModelManager:
         logger.info(f"Loading model from {model_path}")
         
         # Load model
-        self.model = ClimatePredictor()
+        self.model = SimpleClimatePredictor()
         self.model.load_model(model_path.name)
         
         # Load feature columns
@@ -114,7 +114,7 @@ class ModelManager:
         logger.info(f"Model loaded successfully: {len(self.feature_columns)} features")
         return self.model
     
-    def get_model(self) -> ClimatePredictor:
+    def get_model(self) -> SimpleClimatePredictor:
         """Get the loaded model."""
         if self.model is None:
             raise ValueError("Model not loaded")
@@ -138,7 +138,7 @@ async def startup_event():
         model_info = model_manager.model_metadata
         
         # Initialize monitoring
-        monitor = ModelMonitor()
+        monitor = SimpleModelMonitor()
         
         logger.info("API startup completed successfully")
         
