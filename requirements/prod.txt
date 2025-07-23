@@ -1,0 +1,9 @@
+# Production requirements
+-r base.txt
+
+# Production-specific packages
+gunicorn==21.0.1
+sentry-sdk[fastapi]==1.29.2
+
+# Additional monitoring
+structlog==23.1.0
