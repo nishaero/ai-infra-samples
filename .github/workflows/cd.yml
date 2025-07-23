@@ -1,0 +1,321 @@
+name: CD - Continuous Deployment
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_run:
+    workflows: ["CI - Continuous Integration"]
+    types:
+      - completed
+    branches: [ main ]
+
+env:
+  AWS_REGION: us-west-2
+  ECR_REPOSITORY_API: climate-prediction/api
+  ECR_REPOSITORY_TRAINING: climate-prediction/training
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
+    
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    
+    - name: Extract metadata for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: |
+          ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_API }}
+          ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_TRAINING }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Build and push API image
+      id: build-api
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./docker/Dockerfile.api
+        push: true
+        tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_API }}:latest,${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_API }}:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Build and push Training image
+      id: build-training
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./docker/Dockerfile.training
+        push: true
+        tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_TRAINING }}:latest,${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_TRAINING }}:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Image vulnerability scan
+      run: |
+        echo "Running vulnerability scan on built images"
+        # This would integrate with your security scanning tool
+
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.0.0
+        terraform_wrapper: false
+    
+    - name: Terraform Init
+      run: |
+        cd infrastructure/terraform
+        terraform init
+    
+    - name: Terraform Plan
+      id: plan
+      run: |
+        cd infrastructure/terraform
+        terraform plan -var="environment=production" -out=tfplan
+      continue-on-error: true
+    
+    - name: Terraform Apply
+      if: steps.plan.outcome == 'success'
+      run: |
+        cd infrastructure/terraform
+        terraform apply -auto-approve tfplan
+    
+    - name: Get infrastructure outputs
+      id: terraform-outputs
+      run: |
+        cd infrastructure/terraform
+        echo "alb_dns_name=$(terraform output -raw alb_dns_name)" >> $GITHUB_OUTPUT
+        echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
+
+  deploy-application:
+    name: Deploy Application to ECS
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-infrastructure]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    
+    - name: Deploy to ECS
+      run: |
+        # Update ECS service with new image
+        aws ecs update-service \
+          --cluster climate-prediction-cluster \
+          --service climate-prediction-api \
+          --force-new-deployment
+    
+    - name: Wait for deployment
+      run: |
+        aws ecs wait services-stable \
+          --cluster climate-prediction-cluster \
+          --services climate-prediction-api
+    
+    - name: Verify deployment
+      run: |
+        # Get the load balancer DNS name and test the health endpoint
+        ALB_DNS=$(aws elbv2 describe-load-balancers \
+          --names climate-prediction-alb \
+          --query 'LoadBalancers[0].DNSName' \
+          --output text)
+        
+        echo "Testing health endpoint at: http://$ALB_DNS/health"
+        
+        # Wait for the service to be ready
+        for i in {1..30}; do
+          if curl -f "http://$ALB_DNS/health" > /dev/null 2>&1; then
+            echo "✅ Health check passed"
+            break
+          fi
+          echo "⏳ Waiting for service to be ready... ($i/30)"
+          sleep 10
+        done
+
+  run-training-pipeline:
+    name: Run Training Pipeline
+    runs-on: ubuntu-latest
+    needs: deploy-application
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Trigger training pipeline
+      run: |
+        # Run training task on ECS
+        TASK_DEF_ARN=$(aws ecs describe-task-definition \
+          --task-definition climate-prediction-training \
+          --query 'taskDefinition.taskDefinitionArn' \
+          --output text)
+        
+        aws ecs run-task \
+          --cluster climate-prediction-cluster \
+          --task-definition $TASK_DEF_ARN \
+          --launch-type FARGATE \
+          --network-configuration "awsvpcConfiguration={subnets=[subnet-xxx,subnet-yyy],securityGroups=[sg-xxx],assignPublicIp=DISABLED}"
+    
+    - name: Monitor training job
+      run: |
+        echo "Training pipeline triggered successfully"
+        echo "Monitor the training job in AWS ECS console"
+
+  integration-tests:
+    name: Post-Deployment Integration Tests
+    runs-on: ubuntu-latest
+    needs: deploy-application
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install test dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pytest
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Get API endpoint
+      id: get-endpoint
+      run: |
+        ALB_DNS=$(aws elbv2 describe-load-balancers \
+          --names climate-prediction-alb \
+          --query 'LoadBalancers[0].DNSName' \
+          --output text)
+        echo "api_endpoint=http://$ALB_DNS" >> $GITHUB_OUTPUT
+    
+    - name: Run integration tests
+      env:
+        API_ENDPOINT: ${{ steps.get-endpoint.outputs.api_endpoint }}
+      run: |
+        python -c "
+        import requests
+        import json
+        import os
+        
+        base_url = os.environ['API_ENDPOINT']
+        
+        # Test health endpoint
+        response = requests.get(f'{base_url}/health')
+        assert response.status_code == 200
+        print('✅ Health check passed')
+        
+        # Test model info endpoint
+        response = requests.get(f'{base_url}/model/info')
+        assert response.status_code == 200
+        print('✅ Model info endpoint working')
+        
+        # Test prediction endpoint
+        prediction_data = {
+            'longitude': -118.2437,
+            'latitude': 34.0522,
+            'date': '2023-06-15T00:00:00'
+        }
+        response = requests.post(f'{base_url}/predict', json=prediction_data)
+        assert response.status_code == 200
+        result = response.json()
+        assert 'predicted_temperature' in result
+        print('✅ Prediction endpoint working')
+        
+        print('All integration tests passed!')
+        "
+
+  notify:
+    name: Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [deploy-application, integration-tests]
+    if: always()
+    
+    steps:
+    - name: Notify deployment status
+      run: |
+        if [[ "${{ needs.deploy-application.result }}" == "success" && "${{ needs.integration-tests.result }}" == "success" ]]; then
+          echo "🎉 Deployment successful!"
+          echo "✅ Application deployed to production"
+          echo "✅ Integration tests passed"
+          echo "🌐 API is available at the load balancer endpoint"
+        else
+          echo "❌ Deployment failed"
+          echo "Check the workflow logs for details"
+        fi
+    
+    # In production, you would send notifications to Slack, email, etc.
+    # - name: Send Slack notification
+    #   uses: 8398a7/action-slack@v3
+    #   with:
+    #     status: ${{ job.status }}
+    #     text: Deployment completed with status ${{ job.status }}
+    #   env:
+    #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

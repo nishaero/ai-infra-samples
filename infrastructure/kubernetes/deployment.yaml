@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: climate-prediction-api
+  namespace: climate-prediction
+  labels:
+    app: climate-prediction-api
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: climate-prediction-api
+  template:
+    metadata:
+      labels:
+        app: climate-prediction-api
+        component: api
+    spec:
+      containers:
+      - name: api
+        image: climate-prediction/api:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: MODEL_DIR
+          value: "/app/models"
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: climate-config
+              key: aws-region
+        - name: S3_MODELS_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: climate-config
+              key: s3-models-bucket
+        - name: MLFLOW_TRACKING_URI
+          valueFrom:
+            configMapKeyRef:
+              name: climate-config
+              key: mlflow-tracking-uri
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        volumeMounts:
+        - name: models-volume
+          mountPath: /app/models
+      volumes:
+      - name: models-volume
+        persistentVolumeClaim:
+          claimName: models-pvc
+      serviceAccountName: climate-prediction-sa
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: climate-prediction-api-service
+  namespace: climate-prediction
+  labels:
+    app: climate-prediction-api
+spec:
+  selector:
+    app: climate-prediction-api
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: climate-prediction-ingress
+  namespace: climate-prediction
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+  - hosts:
+    - api.climate-prediction.example.com
+    secretName: climate-prediction-tls
+  rules:
+  - host: api.climate-prediction.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: climate-prediction-api-service
+            port:
+              number: 80
