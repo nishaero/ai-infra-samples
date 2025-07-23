@@ -64,8 +64,8 @@ data/external/
 *.h5
 *.hdf5
 
-# Model artifacts
-models/
+# Model artifacts (saved models, not source code)
+/models/
 *.pkl
 *.joblib
 mlruns/
