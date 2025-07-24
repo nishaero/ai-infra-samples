@@ -37,7 +37,7 @@ from src.models.training import SimpleModelTrainer
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -152,7 +152,7 @@ class ClimateReportGenerator:
 
                 if (
                     feature_importance
-                    and "random_forest" in feature_importance  # noqa: E501
+                    and "random_forest" in feature_importance
                 ):
                     importances = feature_importance["random_forest"]
                     indices = np.argsort(importances)[::-1]
@@ -603,7 +603,8 @@ Examples:
     python run_model.py
 
     # Custom date range and region
-    python run_model.py --start-date 2023-01-01 --end-date 2023-06-30 --bbox -125 30 -110 45  # noqa: E501
+    python run_model.py --start-date 2023-01-01 --end-date 2023-06-30 \\
+        --bbox -125 30 -110 45
 
     # Specify output directory
     python run_model.py --output-dir ./my_results

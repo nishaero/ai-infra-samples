@@ -115,7 +115,7 @@ class ESAClimateDataClient:
         """
         logger.info(
             f"Fetching ESA temperature data from {start_date} to {end_date}"
-        )  # noqa: E501
+        )
 
         # Get German weather stations in the area
         stations = self.get_european_stations_in_bbox(bbox)
@@ -134,7 +134,7 @@ class ESAClimateDataClient:
         self,
         start_date: str,
         end_date: str,
-        bbox: Tuple[float, float, float, float],  # noqa: E501
+        bbox: Tuple[float, float, float, float],
     ) -> pd.DataFrame:
         """Generate realistic European climate data for Butzbach, Germany.
 
@@ -281,7 +281,8 @@ class ESAClimateDataClient:
         )
         data["precipitation"].to_csv(precip_output_file, index=False)
         logger.info(
-            f"Saved {len(data['precipitation'])} European precipitation records to {precip_output_file}"  # noqa: E501
+            f"Saved {len(data['precipitation'])} European precipitation records "
+            f"to {precip_output_file}"
         )
 
         return data
