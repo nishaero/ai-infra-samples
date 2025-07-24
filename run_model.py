@@ -151,7 +151,8 @@ class ClimateReportGenerator:
                 feature_importance = trained_model.get_feature_importance()
 
                 if (
-                    feature_importance and "random_forest" in feature_importance  # noqa: E501
+                    feature_importance
+                    and "random_forest" in feature_importance  # noqa: E501
                 ):
                     importances = feature_importance["random_forest"]
                     indices = np.argsort(importances)[::-1]

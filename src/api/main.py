@@ -6,6 +6,7 @@ using the trained ensemble model.
 
 import logging
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -15,12 +16,7 @@ import pandas as pd
 import uvicorn
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import (  # noqa: E501
-    CONTENT_TYPE_LATEST,
-    Counter,
-    Histogram,
-    generate_latest,
-)
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from starlette.responses import Response
 
 from src.api.schemas import (
@@ -51,29 +47,6 @@ ERROR_COUNTER = Counter(
     ["error_type"],
 )
 
-# Global variables
-app = FastAPI(
-    title="Climate Temperature Prediction API",
-    description="REST API for predicting climate temperature using NASA Earth data",  # noqa: E501
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-)
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Global model instance
-model: Optional[SimpleClimatePredictor] = None
-model_info: Dict = {}
-monitor: Optional[SimpleModelMonitor] = None
-
 
 class ModelManager:
     """Manages model loading and caching."""
@@ -84,9 +57,7 @@ class ModelManager:
         self.model_metadata = {}
         self.feature_columns = []
 
-    def load_model(
-        self, model_path: Optional[str] = None
-    ) -> SimpleClimatePredictor:  # noqa: E501
+    def load_model(self, model_path: Optional[str] = None) -> SimpleClimatePredictor:
         """Load the climate prediction model.
 
         Args:
@@ -134,19 +105,25 @@ class ModelManager:
         return self.model
 
 
-# Initialize model manager
-model_manager = ModelManager()
+# Global model instance
+model: Optional[SimpleClimatePredictor] = None
+model_info: Dict = {}
+monitor: Optional[SimpleModelMonitor] = None
+model_manager = None
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize the application on startup."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application lifespan."""
     global model, model_info, monitor
 
+    # Startup
     logger.info("Starting Climate Prediction API")
 
     try:
         # Load model
+        global model_manager
+        model_manager = ModelManager()
         model = model_manager.load_model()
         model_info = model_manager.model_metadata
 
@@ -155,15 +132,64 @@ async def startup_event():
 
         logger.info("API startup completed successfully")
 
+        yield
+
     except Exception as e:
         logger.error(f"Error during startup: {e}")
         raise
+    finally:
+        # Shutdown
+        logger.info("Shutting down Climate Prediction API")
 
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on application shutdown."""
-    logger.info("Shutting down Climate Prediction API")
+# Global variables
+app = FastAPI(
+    title="Climate Temperature Prediction API",
+    description="REST API for predicting climate temperature using NASA Earth data",  # noqa: E501
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure appropriately for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application lifespan."""
+    global model, model_info, monitor
+
+    # Startup
+    logger.info("Starting Climate Prediction API")
+
+    try:
+        # Load model
+        global model_manager
+        model_manager = ModelManager()
+        model = model_manager.load_model()
+        model_info = model_manager.model_metadata
+
+        # Initialize monitoring
+        monitor = SimpleModelMonitor()
+
+        logger.info("API startup completed successfully")
+
+        yield
+
+    except Exception as e:
+        logger.error(f"Error during startup: {e}")
+        raise
+    finally:
+        # Shutdown
+        logger.info("Shutting down Climate Prediction API")
 
 
 def get_model() -> SimpleClimatePredictor:

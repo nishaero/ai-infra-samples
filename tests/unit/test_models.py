@@ -8,10 +8,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.models.climate_model import ClimatePredictor, evaluate_model
+from src.models.climate_model import SimpleClimatePredictor, evaluate_model
 
 
-class TestClimatePredictor:
+class TestSimpleClimatePredictor:
     """Test climate prediction model."""
 
     @pytest.fixture
@@ -46,11 +46,11 @@ class TestClimatePredictor:
     @pytest.fixture
     def predictor(self, temp_model_dir):
         """Create predictor instance."""
-        return ClimatePredictor(model_dir=temp_model_dir, random_state=42)
+        return SimpleClimatePredictor(model_dir=temp_model_dir, random_state=42)
 
     def test_init(self, temp_model_dir):
         """Test predictor initialization."""
-        predictor = ClimatePredictor(model_dir=temp_model_dir, random_state=42)
+        predictor = SimpleClimatePredictor(model_dir=temp_model_dir, random_state=42)
 
         assert predictor.model_dir == Path(temp_model_dir)
         assert predictor.random_state == 42
@@ -168,7 +168,7 @@ class TestClimatePredictor:
         assert model_path.exists()
 
         # Create new predictor and load model
-        new_predictor = ClimatePredictor(model_dir=temp_model_dir)
+        new_predictor = SimpleClimatePredictor(model_dir=temp_model_dir)
         new_predictor.load_model(model_filename)
 
         # Check that model is loaded

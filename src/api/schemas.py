@@ -6,18 +6,28 @@ This module defines Pydantic models for request/response validation.
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PredictionRequest(BaseModel):
     """Request model for climate predictions."""
 
-    longitude: float = Field(
-        ..., ge=-180, le=180, description="Longitude coordinate"
-    )  # noqa: E501
-    latitude: float = Field(
-        ..., ge=-90, le=90, description="Latitude coordinate"
-    )  # noqa: E501
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "longitude": -118.2437,
+                "latitude": 34.0522,
+                "date": "2023-06-15T00:00:00",
+                "precipitation": 0.5,
+                "ndvi": 0.3,
+                "elevation": 100,
+            }
+        },
+        protected_namespaces=(),
+    )
+
+    longitude: float = Field(..., ge=-180, le=180, description="Longitude coordinate")
+    latitude: float = Field(..., ge=-90, le=90, description="Latitude coordinate")
     date: datetime = Field(..., description="Date for prediction")
 
     # Optional environmental features
@@ -29,39 +39,30 @@ class PredictionRequest(BaseModel):
     )
     elevation: Optional[float] = Field(None, description="Elevation in meters")
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "longitude": -118.2437,
-                "latitude": 34.0522,
-                "date": "2023-06-15T00:00:00",
-                "precipitation": 0.5,
-                "ndvi": 0.3,
-                "elevation": 100,
-            }
-        }
-
 
 class BatchPredictionRequest(BaseModel):
     """Request model for batch predictions."""
+
+    model_config = ConfigDict(protected_namespaces=())
 
     predictions: List[PredictionRequest] = Field(
         ..., description="List of prediction requests"
     )
 
-    @validator("predictions")
+    @field_validator("predictions")
+    @classmethod
     def validate_predictions_length(cls, v):
         if len(v) == 0:
             raise ValueError("At least one prediction request is required")
         if len(v) > 1000:
-            raise ValueError(
-                "Too many predictions requested. Maximum is 1000."
-            )  # noqa: E501
+            raise ValueError("Too many predictions requested. Maximum is 1000.")
         return v
 
 
 class PredictionResponse(BaseModel):
     """Response model for climate predictions."""
+
+    model_config = ConfigDict(protected_namespaces=())
 
     longitude: float
     latitude: float
@@ -84,6 +85,8 @@ class PredictionResponse(BaseModel):
 class BatchPredictionResponse(BaseModel):
     """Response model for batch predictions."""
 
+    model_config = ConfigDict(protected_namespaces=())
+
     predictions: List[PredictionResponse]
     total_predictions: int
     processing_time_seconds: float
@@ -91,6 +94,8 @@ class BatchPredictionResponse(BaseModel):
 
 class ModelInfo(BaseModel):
     """Model information response."""
+
+    model_config = ConfigDict(protected_namespaces=())
 
     model_name: str
     model_version: str
@@ -102,6 +107,8 @@ class ModelInfo(BaseModel):
 
 class HealthCheck(BaseModel):
     """Health check response."""
+
+    model_config = ConfigDict(protected_namespaces=())
 
     status: str
     timestamp: datetime

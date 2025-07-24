@@ -18,13 +18,14 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 requires-python = ">=3.9"
 
 [tool.black]
 line-length = 88
-target-version = ['py39']
+target-version = ['py39', 'py310', 'py311', 'py312']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -59,6 +60,7 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
@@ -80,6 +82,7 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "unit: marks tests as unit tests",
     "integration: marks tests as integration tests",
