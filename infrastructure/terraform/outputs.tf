@@ -95,15 +95,15 @@ output "rds_security_group_id" {
 output "deployment_config" {
   description = "Configuration values for application deployment"
   value = {
-    aws_region          = var.aws_region
-    vpc_id              = aws_vpc.main.id
-    private_subnet_ids  = aws_subnet.private[*].id
-    security_group_id   = aws_security_group.ecs_tasks.id
-    target_group_arn    = aws_lb_target_group.api.arn
-    cluster_name        = aws_ecs_cluster.main.name
-    execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
-    task_role_arn       = aws_iam_role.ecs_task_role.arn
-    log_group_name      = aws_cloudwatch_log_group.ecs.name
+    aws_region         = var.aws_region
+    vpc_id             = aws_vpc.main.id
+    private_subnet_ids = aws_subnet.private[*].id
+    security_group_id  = aws_security_group.ecs_tasks.id
+    target_group_arn   = aws_lb_target_group.api.arn
+    cluster_name       = aws_ecs_cluster.main.name
+    execution_role_arn = aws_iam_role.ecs_task_execution_role.arn
+    task_role_arn      = aws_iam_role.ecs_task_role.arn
+    log_group_name     = aws_cloudwatch_log_group.ecs.name
   }
   sensitive = false
 }
@@ -112,7 +112,7 @@ output "deployment_config" {
 output "environment_variables" {
   description = "Environment variables for the application"
   value = {
-    AWS_REGION                = var.aws_region
+    AWS_REGION               = var.aws_region
     S3_DATA_BUCKET           = aws_s3_bucket.data.bucket
     S3_MODELS_BUCKET         = aws_s3_bucket.models.bucket
     S3_ARTIFACTS_BUCKET      = aws_s3_bucket.artifacts.bucket

@@ -8,22 +8,22 @@ resource "aws_ecs_task_definition" "api" {
   cpu                      = var.api_cpu
   memory                   = var.api_memory
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  task_role_arn           = aws_iam_role.ecs_task_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
       name  = "climate-api"
       image = "${aws_ecr_repository.api.repository_url}:latest"
-      
+
       essential = true
-      
+
       portMappings = [
         {
           containerPort = 8000
           protocol      = "tcp"
         }
       ]
-      
+
       environment = [
         {
           name  = "AWS_REGION"
@@ -42,7 +42,7 @@ resource "aws_ecs_task_definition" "api" {
           value = var.environment
         }
       ]
-      
+
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -51,12 +51,12 @@ resource "aws_ecs_task_definition" "api" {
           "awslogs-stream-prefix" = "api"
         }
       }
-      
+
       healthCheck = {
-        command = ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
-        interval = 30
-        timeout = 5
-        retries = 3
+        command     = ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+        interval    = 30
+        timeout     = 5
+        retries     = 3
         startPeriod = 60
       }
     }
@@ -87,10 +87,6 @@ resource "aws_ecs_service" "api" {
     container_port   = 8000
   }
 
-  deployment_configuration {
-    maximum_percent         = 200
-    minimum_healthy_percent = 100
-  }
 
   depends_on = [
     aws_lb_listener.main,
@@ -110,15 +106,15 @@ resource "aws_ecs_task_definition" "training" {
   cpu                      = var.training_cpu
   memory                   = var.training_memory
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  task_role_arn           = aws_iam_role.ecs_task_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
       name  = "climate-training"
       image = "${aws_ecr_repository.training.repository_url}:latest"
-      
+
       essential = true
-      
+
       environment = [
         {
           name  = "AWS_REGION"
@@ -145,7 +141,7 @@ resource "aws_ecs_task_definition" "training" {
           value = var.environment
         }
       ]
-      
+
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -249,7 +245,7 @@ resource "aws_appautoscaling_policy" "api_scale_up" {
 resource "aws_cloudwatch_event_rule" "training_schedule" {
   name                = "${var.project_name}-training-schedule"
   description         = "Trigger training pipeline daily"
-  schedule_expression = "cron(0 2 * * ? *)"  # Run at 2 AM UTC daily
+  schedule_expression = "cron(0 2 * * ? *)" # Run at 2 AM UTC daily
 
   tags = {
     Name = "${var.project_name}-training-schedule"

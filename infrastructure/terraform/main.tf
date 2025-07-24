@@ -12,7 +12,7 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  
+
   default_tags {
     tags = {
       Project     = "climate-prediction"
@@ -97,7 +97,7 @@ resource "aws_route_table_association" "public" {
 
 # NAT Gateway for private subnets
 resource "aws_eip" "nat" {
-  count = 1
+  count  = 1
   domain = "vpc"
 
   tags = {
@@ -380,7 +380,7 @@ resource "aws_db_instance" "main" {
   engine         = "postgres"
   engine_version = "15.4"
   instance_class = var.rds_instance_class
-  
+
   allocated_storage     = 20
   max_allocated_storage = 100
   storage_type          = "gp2"
@@ -394,8 +394,8 @@ resource "aws_db_instance" "main" {
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
   backup_retention_period = 7
-  backup_window          = "03:00-04:00"
-  maintenance_window     = "Sun:04:00-Sun:05:00"
+  backup_window           = "03:00-04:00"
+  maintenance_window      = "Sun:04:00-Sun:05:00"
 
   skip_final_snapshot = true
   deletion_protection = false
@@ -476,10 +476,10 @@ resource "aws_lb" "main" {
 }
 
 resource "aws_lb_target_group" "api" {
-  name     = "${var.project_name}-api-tg"
-  port     = 8000
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
+  name        = "${var.project_name}-api-tg"
+  port        = 8000
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
   health_check {

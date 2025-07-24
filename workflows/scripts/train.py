@@ -145,7 +145,7 @@ def main():
             logger.info("Loading existing processed data")
             import pandas as pd
             
-            processed_file = f"{args.data_dir}/processed/training_data_{args.start_date}_{args.end_date}.csv"
+            processed_file = f"{args.data_dir}/processed/training_data_{args.start_date}_{args.end_date}.csv"  # noqa: E501
             df = pd.read_csv(processed_file, parse_dates=["date"])
             
             # Get feature columns
@@ -155,11 +155,11 @@ def main():
             ]
             features = [col for col in df.columns if col not in exclude_cols]
             
-            logger.info(f"Loaded data: {len(df)} samples, {len(features)} features")
+            logger.info(f"Loaded data: {len(df)} samples, {len(features)} features")  # noqa: E501
         
         if args.hyperparameter_tuning:
             # Perform hyperparameter tuning
-            logger.info(f"Starting hyperparameter tuning with {args.n_trials} trials")
+            logger.info(f"Starting hyperparameter tuning with {args.n_trials} trials")  # noqa: E501
             tuning_results = trainer.hyperparameter_tuning(
                 df, features, n_trials=args.n_trials
             )

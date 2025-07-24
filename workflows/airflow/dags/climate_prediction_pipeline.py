@@ -53,8 +53,8 @@ def get_pipeline_config():
         "start_date": Variable.get("climate_start_date", "2023-01-01"),
         "end_date": Variable.get("climate_end_date", "2023-12-31"),
         "bbox": Variable.get("climate_bbox", "-120,35,-115,40").split(","),
-        "mlflow_tracking_uri": Variable.get("mlflow_tracking_uri", "http://mlflow:5000"),
-        "experiment_name": Variable.get("mlflow_experiment_name", "climate-prediction-airflow"),
+        "mlflow_tracking_uri": Variable.get("mlflow_tracking_uri", "http://mlflow:5000"),  # noqa: E501
+        "experiment_name": Variable.get("mlflow_experiment_name", "climate-prediction-airflow"),  # noqa: E501
     }
 
 
@@ -150,7 +150,7 @@ def train_model(**context):
     )
     
     # Load preprocessed data
-    processed_file = f"{config['data_dir']}/processed/training_data_{config['start_date']}_{config['end_date']}.csv"
+    processed_file = f"{config['data_dir']}/processed/training_data_{config['start_date']}_{config['end_date']}.csv"  # noqa: E501
     df = pd.read_csv(processed_file, parse_dates=["date"])
     
     # Get feature columns from preprocessing task
@@ -160,7 +160,7 @@ def train_model(**context):
     )
     
     # Get all feature columns (exclude target and metadata)
-    exclude_cols = ["LST_Day_C", "date", "longitude", "latitude", "LST_Day_1km", "LST_Night_1km", "QC_Day", "QC_Night"]
+    exclude_cols = ["LST_Day_C", "date", "longitude", "latitude", "LST_Day_1km", "LST_Night_1km", "QC_Day", "QC_Night"]  # noqa: E501
     features = [col for col in df.columns if col not in exclude_cols]
     
     # Train model
@@ -208,7 +208,7 @@ def validate_model(**context):
     model.load_model(model_filename)
     
     # Load test data (use a holdout set)
-    processed_file = f"{config['data_dir']}/processed/training_data_{config['start_date']}_{config['end_date']}.csv"
+    processed_file = f"{config['data_dir']}/processed/training_data_{config['start_date']}_{config['end_date']}.csv"  # noqa: E501
     df = pd.read_csv(processed_file, parse_dates=["date"])
     
     # Use last 20% for validation
@@ -216,7 +216,7 @@ def validate_model(**context):
     val_df = df.tail(val_size)
     
     # Prepare features
-    exclude_cols = ["LST_Day_C", "date", "longitude", "latitude", "LST_Day_1km", "LST_Night_1km", "QC_Day", "QC_Night"]
+    exclude_cols = ["LST_Day_C", "date", "longitude", "latitude", "LST_Day_1km", "LST_Night_1km", "QC_Day", "QC_Night"]  # noqa: E501
     features = [col for col in df.columns if col not in exclude_cols]
     
     X_val = val_df[features]
@@ -253,7 +253,7 @@ def validate_model(**context):
     )
     
     if not validation_passed:
-        raise ValueError(f"Model validation failed: MAE={val_metrics['mae']:.3f}, R²={val_metrics['r2']:.3f}")
+        raise ValueError(f"Model validation failed: MAE={val_metrics['mae']:.3f}, R²={val_metrics['r2']:.3f}")  # noqa: E501
     
     return "Model validation passed"
 
@@ -278,7 +278,7 @@ def deploy_model(**context):
     
     # Copy model to production directory
     model_path = training_results["model_path"]
-    production_model_path = f"{config['model_dir']}/production/climate_model_latest.joblib"
+    production_model_path = f"{config['model_dir']}/production/climate_model_latest.joblib"  # noqa: E501
     
     # Create production directory
     Path(production_model_path).parent.mkdir(parents=True, exist_ok=True)
@@ -390,7 +390,7 @@ def send_pipeline_notification(**context):
     - Test R²: {training_results['test_r2']:.3f}
     - Training Time: {training_results['training_time']:.1f}s
     
-    Model Validation: {'✓ PASSED' if validation_results['validation_passed'] else '✗ FAILED'}
+    Model Validation: {'✓ PASSED' if validation_results['validation_passed'] else '✗ FAILED'}  # noqa: E501
     
     Deployment:
     - Model Version: {deployment_results['model_version']}
@@ -466,4 +466,4 @@ end_task = DummyOperator(
 )
 
 # Define task dependencies
-start_task >> ingest_task >> preprocess_task >> model_group >> deploy_task >> monitor_task >> notify_task >> end_task
+start_task >> ingest_task >> preprocess_task >> model_group >> deploy_task >> monitor_task >> notify_task >> end_task  # noqa: E501

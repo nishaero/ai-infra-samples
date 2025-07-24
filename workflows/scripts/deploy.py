@@ -202,7 +202,7 @@ def create_deployment_health_check(production_dir: str) -> dict:
         health_status.get("model_loadable", False)
     ])
     
-    health_status["overall_health"] = "healthy" if overall_health else "unhealthy"
+    health_status["overall_health"] = "healthy" if overall_health else "unhealthy"  # noqa: E501
     
     logger.info(f"Health check results: {health_status}")
     
@@ -248,7 +248,7 @@ def main():
     try:
         if args.action == "validate":
             if not args.model_path or not args.validation_data:
-                raise ValueError("Model path and validation data are required for validation")
+                raise ValueError("Model path and validation data are required for validation")  # noqa: E501
             
             results = validate_model(args.model_path, args.validation_data)
             
@@ -262,7 +262,7 @@ def main():
             if not args.model_path:
                 raise ValueError("Model path is required for deployment")
             
-            results = deploy_to_production(args.model_path, args.production_dir)
+            results = deploy_to_production(args.model_path, args.production_dir)  # noqa: E501
             logger.info("Model deployed successfully!")
         
         elif args.action == "health-check":
