@@ -65,9 +65,9 @@ class SimpleClimatePreprocessor:
         # Load precipitation data (try ESA format first, then fallback)
         precip_files = [
             self.raw_dir / f"esa_precipitation_{start_date}_{end_date}.csv",
-            self.raw_dir / f"precipitation_{start_date}_{end_date}.csv"
+            self.raw_dir / f"precipitation_{start_date}_{end_date}.csv",
         ]  # noqa: E501
-        
+
         for precip_file in precip_files:
             if precip_file.exists():
                 data["precipitation"] = pd.read_csv(
