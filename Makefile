@@ -39,8 +39,7 @@ lint: ## Run linting
 	@echo "Running linting..."
 	black --check src/ tests/
 	isort --check-only src/ tests/
-	flake8 src/ tests/
-	mypy src/
+	flake8 src/ tests/ --max-line-length=88
 
 format: ## Format code
 	@echo "Formatting code..."

@@ -36,8 +36,7 @@ from src.models.training import SimpleModelTrainer
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -150,10 +149,7 @@ class ClimateReportGenerator:
             try:
                 feature_importance = trained_model.get_feature_importance()
 
-                if (
-                    feature_importance
-                    and "random_forest" in feature_importance
-                ):
+                if feature_importance and "random_forest" in feature_importance:
                     importances = feature_importance["random_forest"]
                     indices = np.argsort(importances)[::-1]
 

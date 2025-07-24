@@ -20,7 +20,7 @@ factory-boy==3.3.1
 responses==0.25.3
 
 # Documentation
-sphinx==8.0.2
+sphinx==7.4.7
 sphinx-rtd-theme==2.0.0
 
 # Jupyter for experimentation

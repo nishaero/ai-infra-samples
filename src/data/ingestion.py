@@ -113,9 +113,7 @@ class ESAClimateDataClient:
         Returns:
             DataFrame with temperature data for German region
         """
-        logger.info(
-            f"Fetching ESA temperature data from {start_date} to {end_date}"
-        )
+        logger.info(f"Fetching ESA temperature data from {start_date} to {end_date}")
 
         # Get German weather stations in the area
         stations = self.get_european_stations_in_bbox(bbox)
