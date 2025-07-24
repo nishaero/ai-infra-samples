@@ -45,8 +45,9 @@ class SimpleClimatePreprocessor:
         """
         data = {}
 
-        # Load temperature data (try NOAA format first, then fallback to old format)  # noqa: E501
+        # Load temperature data (try ESA format first, then fallback to NOAA format)  # noqa: E501
         temp_files = [
+            self.raw_dir / f"esa_temperature_{start_date}_{end_date}.csv",
             self.raw_dir / f"noaa_temperature_{start_date}_{end_date}.csv",
             self.raw_dir / f"temperature_{start_date}_{end_date}.csv",
         ]
@@ -61,17 +62,21 @@ class SimpleClimatePreprocessor:
                 )
                 break
 
-        # Load precipitation data
-        precip_file = (
+        # Load precipitation data (try ESA format first, then fallback)
+        precip_files = [
+            self.raw_dir / f"esa_precipitation_{start_date}_{end_date}.csv",
             self.raw_dir / f"precipitation_{start_date}_{end_date}.csv"
-        )  # noqa: E501
-        if precip_file.exists():
-            data["precipitation"] = pd.read_csv(
-                precip_file, parse_dates=["date"]
-            )  # noqa: E501
-            logger.info(
-                f"Loaded precipitation data: {len(data['precipitation'])} records"  # noqa: E501
-            )
+        ]  # noqa: E501
+        
+        for precip_file in precip_files:
+            if precip_file.exists():
+                data["precipitation"] = pd.read_csv(
+                    precip_file, parse_dates=["date"]
+                )  # noqa: E501
+                logger.info(
+                    f"Loaded precipitation data from {precip_file.name}: {len(data['precipitation'])} records"  # noqa: E501
+                )
+                break
 
         return data
 

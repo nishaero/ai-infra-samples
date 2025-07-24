@@ -14,7 +14,7 @@ import mlflow.sklearn
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from src.data.ingestion import NOAAClimateDataClient
+from src.data.ingestion import ESAClimateDataClient
 from src.data.preprocessing import SimpleClimatePreprocessor
 from src.models.climate_model import SimpleClimatePredictor, evaluate_model
 
@@ -44,7 +44,7 @@ class SimpleModelTrainer:
         self.model_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialize components
-        self.data_client = NOAAClimateDataClient(str(self.data_dir / "raw"))
+        self.data_client = ESAClimateDataClient(str(self.data_dir / "raw"))
         self.preprocessor = SimpleClimatePreprocessor(str(self.data_dir))
 
         # Setup MLflow

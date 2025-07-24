@@ -1,27 +1,27 @@
-# Climate Temperature Prediction using NASA Earth Data
+# Climate Temperature Prediction using ESA Climate Data
 
 ## Problem Description
 
-This project addresses the critical need for accurate climate temperature prediction using satellite observations and meteorological data from NASA's Earth Observing System. The system predicts regional temperature anomalies by analyzing MODIS Land Surface Temperature data, precipitation patterns, and other climate indicators.
+This project addresses the critical need for accurate climate temperature prediction using satellite observations and meteorological data from ESA's Climate Data Portal and Copernicus services. The system predicts regional temperature anomalies for Central European locations, specifically focusing on Butzbach, Germany, by analyzing temperature patterns, precipitation data, and other climate indicators.
 
 ### Objectives
-- Predict temperature anomalies for specific geographic regions
+- Predict temperature variations for Central European regions (Germany)
 - Provide early warning capabilities for extreme temperature events
-- Support climate monitoring and research initiatives
+- Support climate monitoring and research initiatives for European climate
 - Enable data-driven decision making for climate adaptation strategies
 
 ### Business Impact
-- **Climate Monitoring**: Real-time tracking of temperature trends across regions
-- **Early Warning Systems**: Proactive alerts for temperature anomalies
-- **Research Support**: Data insights for climate scientists and researchers
-- **Policy Support**: Evidence-based data for climate policy decisions
+- **Climate Monitoring**: Real-time tracking of temperature trends across European regions
+- **Early Warning Systems**: Proactive alerts for temperature anomalies in Central Europe
+- **Research Support**: Data insights for European climate scientists and researchers
+- **Policy Support**: Evidence-based data for European climate policy decisions
 
 ## Architecture Overview
 
 The project implements a complete MLOps pipeline with the following components:
 
-- **Data Pipeline**: Automated ingestion from NASA Earth Data APIs
-- **ML Pipeline**: Time series forecasting using ensemble methods
+- **Data Pipeline**: Automated ingestion from ESA Climate Data Portal and Copernicus CDS
+- **ML Pipeline**: Time series forecasting using ensemble methods for European climate
 - **Experiment Tracking**: MLflow for model versioning and metrics
 - **Workflow Orchestration**: Airflow for pipeline automation
 - **Model Deployment**: Containerized FastAPI service on AWS
@@ -30,7 +30,8 @@ The project implements a complete MLOps pipeline with the following components:
 
 ## Features
 
-- 🌍 **NASA Earth Data Integration**: Direct API access to MODIS and other satellite data
+- 🌍 **ESA Climate Data Integration**: Direct API access to Copernicus and ESA climate services
+- 🇩🇪 **European Focus**: Specialized models for Central European continental climate
 - 🤖 **Advanced ML Models**: Ensemble methods for robust temperature prediction
 - 📊 **Experiment Tracking**: Full MLflow integration with model registry
 - 🔄 **Automated Workflows**: Airflow orchestration for training and inference

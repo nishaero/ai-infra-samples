@@ -624,8 +624,8 @@ Examples:
         "--bbox",
         nargs=4,
         type=float,
-        default=[-120, 35, -115, 40],
-        help="Bounding box: min_lon min_lat max_lon max_lat (default: California region)",  # noqa: E501
+        default=[8.5, 50.3, 8.8, 50.6],  # Butzbach, Germany region
+        help="Bounding box: min_lon min_lat max_lon max_lat (default: Butzbach, Germany region)",  # noqa: E501
     )
     parser.add_argument(
         "--output-dir",

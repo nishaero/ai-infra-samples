@@ -1,6 +1,15 @@
 # Running Climate Prediction Model Locally
 
-This guide explains how to run the climate temperature prediction model on your local machine to generate predictions, visualizations, and comprehensive reports.
+This guide explains how to run the climate temperature prediction model on your local machine to generate predictions, visualizations, and comprehensive reports using ESA Climate Data for the Butzbach, Germany region.
+
+## 🌍 About This Model
+
+This project uses **ESA (European Space Agency) Climate Data** to predict temperatures in **Butzbach, Hessen, Germany** - a representative Central European location. The model demonstrates climate prediction capabilities using:
+
+- **Data Source**: ESA Climate Data Portal and Copernicus Climate Data Store
+- **Target Region**: Butzbach, Germany (50.4333°N, 8.6667°E) 
+- **Climate Type**: Central European continental climate
+- **Prediction**: Daily temperature variations with seasonal patterns
 
 ## 🚀 Quick Start
 
@@ -32,13 +41,13 @@ pip install -r requirements/base.txt
 ### Step 2: Run the Model
 
 ```bash
-# Basic run with default parameters (California region, 3 months of data)
+# Basic run with default parameters (Butzbach, Germany region, 3 months of data)
 python run_model.py
 
 # The script will:
-# 1. Download real climate data from NOAA
+# 1. Download real climate data from ESA services
 # 2. Train machine learning models
-# 3. Generate predictions
+# 3. Generate predictions for German climate patterns
 # 4. Create visualization plots
 # 5. Generate an HTML report
 ```
@@ -97,8 +106,8 @@ A comprehensive report including:
 ### Custom Parameters
 
 ```bash
-# Different geographic region (Pacific Northwest)
-python run_model.py --bbox -130 42 -120 49
+# Different geographic region (Frankfurt area)
+python run_model.py --bbox 8.3 50.0 8.9 50.3
 
 # Different time period (6 months)
 python run_model.py --start-date 2023-01-01 --end-date 2023-06-30
@@ -109,12 +118,12 @@ python run_model.py --output-dir ./my_results
 # Different train/test split
 python run_model.py --test-size 0.3
 
-# Complete custom run
+# Complete custom run for entire Hessen region
 python run_model.py \
     --start-date 2023-01-01 \
     --end-date 2023-12-31 \
-    --bbox -125 30 -110 45 \
-    --output-dir ./annual_results \
+    --bbox 8.0 49.8 10.2 51.8 \
+    --output-dir ./hessen_results \
     --test-size 0.2
 ```
 
@@ -124,28 +133,28 @@ python run_model.py \
 |-----------|-------------|---------|---------|
 | `--start-date` | Start date for data (YYYY-MM-DD) | 2023-01-01 | 2023-06-01 |
 | `--end-date` | End date for data (YYYY-MM-DD) | 2023-03-31 | 2023-08-31 |
-| `--bbox` | Bounding box: min_lon min_lat max_lon max_lat | -120 35 -115 40 | -130 42 -120 49 |
+| `--bbox` | Bounding box: min_lon min_lat max_lon max_lat | 8.5 50.3 8.8 50.6 | 8.0 49.8 10.2 51.8 |
 | `--output-dir` | Output directory for results | output | ./results |
 | `--test-size` | Test set size ratio (0.1-0.5) | 0.2 | 0.3 |
 | `--random-state` | Random seed for reproducibility | 42 | 123 |
 
-### Geographic Regions Examples
+### German Regions Examples
 
 ```bash
-# California
-python run_model.py --bbox -124 32 -114 42
+# Butzbach area (default)
+python run_model.py --bbox 8.5 50.3 8.8 50.6
 
-# Texas  
-python run_model.py --bbox -106 25 -93 36
+# Frankfurt metropolitan area
+python run_model.py --bbox 8.3 50.0 8.9 50.3
 
-# Florida
-python run_model.py --bbox -87 24 -80 31
+# Entire Hessen state
+python run_model.py --bbox 8.0 49.8 10.2 51.8
 
-# Pacific Northwest
-python run_model.py --bbox -130 42 -116 49
+# Rhein-Main region
+python run_model.py --bbox 8.1 49.9 8.8 50.3
 
-# Great Lakes
-python run_model.py --bbox -92 41 -76 49
+# Kassel region (Northern Hessen)
+python run_model.py --bbox 9.2 51.2 9.6 51.5
 ```
 
 ## 🔍 Understanding the Output
@@ -169,9 +178,11 @@ python run_model.py --bbox -92 41 -76 49
 ### Data Sources
 
 The model uses real-world data from:
-- **Primary**: NOAA Climate Data Online API
-- **Fallback**: Realistic synthetic data based on meteorological principles
+- **Primary**: ESA Climate Data Portal (https://climate.esa.int)
+- **Secondary**: Copernicus Climate Data Store (CDS)
+- **Fallback**: Realistic European climate data based on meteorological principles
 - **Variables**: Temperature, precipitation, geographic coordinates, time features
+- **Region Focus**: Central European continental climate patterns (Germany)
 
 ### Machine Learning Models
 
@@ -203,8 +214,8 @@ The model uses real-world data from:
    ```
 
 2. **Data Download Issues**
-   - The script uses a fallback synthetic data generator if NOAA API is unavailable
-   - No action needed - the model will still work with realistic data
+   - The script uses a fallback European climate data generator if ESA APIs are unavailable
+   - No action needed - the model will still work with realistic German climate patterns
 
 3. **Memory Issues**
    ```bash
