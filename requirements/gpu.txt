@@ -1,0 +1,19 @@
+# GPU-specific requirements for RunPod and other GPU containers
+# Install these in addition to base.txt for GPU acceleration
+
+# PyTorch with CUDA support
+torch>=2.0.0
+
+# XGBoost with GPU support (already in base.txt, but explicitly enable GPU)
+# Use 'gpu_hist' tree_method in XGBoost configuration
+
+# LightGBM with GPU support (already in base.txt, but explicitly enable GPU)
+# Use device_type='gpu' in LightGBM configuration
+
+# RAPIDS (optional - for advanced GPU acceleration)
+# cudf-cu12>=24.0.0     # GPU DataFrames
+# cuml-cu12>=24.0.0     # GPU ML algorithms
+# cupy-cuda12x>=12.0.0  # GPU NumPy replacement
+
+# Note: RAPIDS requires specific CUDA versions and may have compatibility issues
+# For most use cases, GPU-enabled XGBoost and LightGBM are sufficient

@@ -5,6 +5,11 @@ scikit-learn==1.5.2
 xgboost==2.1.1
 lightgbm==4.5.0
 
+# GPU support (optional - install with GPU-enabled versions for GPU containers)
+# torch>=2.0.0  # For PyTorch GPU support
+# cudf-cu12>=24.0.0  # For RAPIDS GPU-accelerated dataframes
+# cuml-cu12>=24.0.0  # For RAPIDS GPU-accelerated ML
+
 # Data processing
 requests==2.32.3
 netCDF4==1.7.1

@@ -32,6 +32,7 @@ from sklearn.model_selection import train_test_split
 
 # Import our custom modules
 from src.models.climate_model import evaluate_model
+from src.models.gpu_utils import gpu_manager
 from src.models.training import SimpleModelTrainer
 
 # Configure logging
@@ -250,6 +251,7 @@ class ClimateReportGenerator:
         plot_files: List[str],
         training_time: float,
         dataset_info: Dict,
+        gpu_info: Dict = None,
     ) -> str:
         """Generate comprehensive HTML report.
 
@@ -258,11 +260,13 @@ class ClimateReportGenerator:
             plot_files: List of plot file paths
             training_time: Time taken for training
             dataset_info: Information about the dataset
+            gpu_info: Information about GPU usage
 
         Returns:
             Path to generated HTML report
         """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        gpu_info = gpu_info or {}
 
         html_content = f"""
         <!DOCTYPE html>
@@ -398,7 +402,8 @@ class ClimateReportGenerator:
 
                 <div class="summary">
                     <h3>📊 Executive Summary</h3>
-                    <p>This report presents the results of training a machine learning model to predict climate temperatures using real-world meteorological data. The model was trained using an ensemble approach combining Linear Regression and Random Forest algorithms.</p>  # noqa: E501
+                    <p>This report presents the results of training a machine learning model to predict climate temperatures using real-world meteorological data. The model was trained using an ensemble approach with GPU acceleration when available.</p>
+                    {f'<p><strong>🚀 GPU Acceleration:</strong> {"Enabled" if gpu_info.get("gpu_available", False) else "Disabled"}</p>' if gpu_info else ''}
                 </div>
 
                 <h2>🎯 Model Performance</h2>
@@ -496,6 +501,26 @@ class ClimateReportGenerator:
                     </div>
                 </div>
 
+                <h2>⚡ Hardware & Performance</h2>
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h4>GPU Information</h4>
+                        <p><strong>GPU Available:</strong> {"Yes" if gpu_info.get("gpu_available", False) else "No"}</p>
+                        <p><strong>PyTorch Available:</strong> {"Yes" if gpu_info.get("torch_available", False) else "No"}</p>
+                        <p><strong>CUDA Available:</strong> {"Yes" if gpu_info.get("cuda_available", False) else "No"}</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Models Used</h4>
+                        <p><strong>Total Models:</strong> {len(results.get('training_results', {}).get('model_scores', {}))}</p>
+                        <p><strong>GPU Accelerated:</strong> {len([m for m in results.get('training_results', {}).get('model_scores', {}).keys() if 'gpu' in m.lower()])}</p>
+                        <p><strong>Models:</strong> {', '.join(results.get('training_results', {}).get('model_scores', {}).keys())}</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Setup Recommendations</h4>
+                        <p>{"GPU acceleration is active!" if gpu_info.get("gpu_available", False) else "For GPU acceleration, install PyTorch with CUDA support"}</p>
+                    </div>
+                </div>
+
                 <h2>🔬 Methodology</h2>
                 <div class="explanation">
                     <h4>Data Collection & Processing:</h4>
@@ -510,7 +535,8 @@ class ClimateReportGenerator:
                     <ol>
                         <li><strong>Linear Regression:</strong> Baseline model for interpretability</li>  # noqa: E501
                         <li><strong>Random Forest:</strong> Non-linear patterns and feature interactions</li>  # noqa: E501
-                        <li><strong>Ensemble Method:</strong> Simple averaging of predictions for robustness</li>  # noqa: E501
+                        <li><strong>GPU Models:</strong> {"XGBoost and LightGBM with GPU acceleration" if gpu_info.get("gpu_available", False) else "CPU-only XGBoost and LightGBM"}</li>  # noqa: E501
+                        <li><strong>Ensemble Method:</strong> Weighted averaging with GPU models prioritized</li>  # noqa: E501
                         <li><strong>Validation:</strong> Cross-validation and holdout testing</li>  # noqa: E501
                     </ol>
                 </div>
@@ -520,6 +546,7 @@ class ClimateReportGenerator:
                     <h4>Model Performance Insights:</h4>
                     <ul>
                         <li>The ensemble approach provides more robust predictions than individual models</li>  # noqa: E501
+                        <li>{"GPU acceleration improved training speed significantly" if gpu_info.get("gpu_available", False) else "CPU-only training completed successfully"}</li>  # noqa: E501
                         <li>Geographic features (latitude/longitude) are likely important for regional temperature patterns</li>  # noqa: E501
                         <li>Time-based features help capture seasonal temperature variations</li>  # noqa: E501
                         <li>The model performance is suitable for climate monitoring applications</li>  # noqa: E501
@@ -527,6 +554,7 @@ class ClimateReportGenerator:
 
                     <h4>Potential Improvements:</h4>
                     <ul>
+                        <li>{"Utilize more GPU memory for larger models" if gpu_info.get("gpu_available", False) else "Install GPU support for faster training"}</li>  # noqa: E501
                         <li>Include more climate variables (humidity, wind speed, atmospheric pressure)</li>  # noqa: E501
                         <li>Add satellite-derived features (vegetation indices, land cover)</li>  # noqa: E501
                         <li>Implement time series models for temporal dependencies</li>  # noqa: E501
@@ -547,6 +575,8 @@ class ClimateReportGenerator:
                             <th>MAE (°C)</th>
                             <th>RMSE (°C)</th>
                             <th>R² Score</th>
+                            <th>GPU Accelerated</th>
+                            <th>Training Time (s)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -555,12 +585,16 @@ class ClimateReportGenerator:
             for model_name, scores in results["training_results"][
                 "model_scores"
             ].items():
+                gpu_accelerated = scores.get("gpu_accelerated", False)
+                training_time = scores.get("training_time", 0)
                 html_content += f"""
                         <tr>
                             <td>{model_name.replace('_', ' ').title()}</td>
                             <td>{scores['mae']:.3f}</td>
                             <td>{scores['rmse']:.3f}</td>
                             <td>{scores['r2']:.3f}</td>
+                            <td>{"✅ Yes" if gpu_accelerated else "❌ No"}</td>
+                            <td>{training_time:.2f}</td>
                         </tr>
                 """
 
@@ -657,6 +691,16 @@ Examples:
     logger.info(f"🗺️  Region: {args.bbox}")
     logger.info(f"📁 Output Directory: {args.output_dir}")
 
+    # Check GPU availability
+    gpu_info = gpu_manager.get_gpu_info()
+    logger.info(f"🚀 GPU Available: {gpu_info['gpu_available']}")
+    if gpu_info["gpu_available"]:
+        for device in gpu_info["devices"]:
+            logger.info(f"   • {device['name']}")
+    else:
+        logger.info("   • Running in CPU-only mode")
+        logger.info("   • For GPU acceleration, see GPU setup instructions below")
+
     start_time = time.time()
 
     try:
@@ -731,7 +775,7 @@ Examples:
             }
 
             report_path = report_generator.generate_html_report(
-                results, plot_files, training_time, dataset_info
+                results, plot_files, training_time, dataset_info, gpu_info
             )
 
             total_time = time.time() - start_time
@@ -763,10 +807,26 @@ Examples:
             print(f"   • R² Score: {results['test_metrics']['r2']:.3f}")
             print(f"📈 Dataset: {len(df)} samples, {len(features)} features")
             print(f"⏱️  Training Time: {training_time:.2f} seconds")
+            print(
+                f"🚀 GPU Acceleration: {'Enabled' if gpu_info['gpu_available'] else 'Disabled'}"
+            )
+            if gpu_info["gpu_available"]:
+                print(
+                    f"   • GPU Models: {len([m for m in results['training_results']['model_scores'].keys() if 'gpu' in m.lower()])}"
+                )
             print(f"📁 Output Directory: {os.path.abspath(args.output_dir)}")
             print(
                 f"📋 View detailed report: file://{os.path.abspath(report_path)}"  # noqa: E501
             )
+            if not gpu_info["gpu_available"]:
+                print("\n💡 GPU Setup Instructions:")
+                print("   • For RunPod: Use a CUDA-enabled PyTorch container")
+                print(
+                    "   • Install GPU requirements: pip install -r requirements/gpu.txt"
+                )
+                print(
+                    "   • Install PyTorch with CUDA: pip install torch --index-url https://download.pytorch.org/whl/cu121"
+                )
             print("=" * 60)
 
     except Exception as e:

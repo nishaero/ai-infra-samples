@@ -1,7 +1,7 @@
-"""Simplified Model Training Module.
+"""Model Training Module with GPU Support.
 
-This module handles training climate prediction models with basic
-MLflow integration for learning purposes.
+This module handles training climate prediction models with GPU acceleration
+and MLflow integration for learning purposes.
 """
 
 import logging
@@ -16,7 +16,8 @@ from sklearn.model_selection import train_test_split
 
 from src.data.ingestion import ESAClimateDataClient
 from src.data.preprocessing import SimpleClimatePreprocessor
-from src.models.climate_model import SimpleClimatePredictor, evaluate_model
+from src.models.climate_model import GPUAcceleratedClimatePredictor, evaluate_model
+from src.models.gpu_utils import gpu_manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,13 +25,13 @@ logger = logging.getLogger(__name__)
 
 
 class SimpleModelTrainer:
-    """Simple training pipeline for climate models."""
+    """Training pipeline for climate models with GPU support."""
 
     def __init__(
         self,
         data_dir: str = "data",
         model_dir: str = "models",
-        experiment_name: str = "simple-climate-prediction",
+        experiment_name: str = "gpu-climate-prediction",
     ):
         """Initialize model trainer.
 
@@ -110,8 +111,8 @@ class SimpleModelTrainer:
         target_col: str = "temperature",
         test_size: float = 0.2,
         random_state: int = 42,
-    ) -> Tuple[SimpleClimatePredictor, Dict[str, Any]]:
-        """Train simple climate prediction model.
+    ) -> Tuple[GPUAcceleratedClimatePredictor, Dict[str, Any]]:
+        """Train climate prediction model with GPU support.
 
         Args:
             df: Training dataframe
@@ -123,7 +124,14 @@ class SimpleModelTrainer:
         Returns:
             Tuple of (trained_model, results)
         """
-        logger.info("Starting model training")
+        logger.info("Starting model training with GPU support")
+
+        # Log GPU information
+        gpu_info = gpu_manager.get_gpu_info()
+        logger.info(f"GPU Available: {gpu_info['gpu_available']}")
+        if gpu_info["gpu_available"]:
+            for device in gpu_info["devices"]:
+                logger.info(f"GPU Device: {device['name']}")
 
         # Start MLflow run
         with mlflow.start_run() as run:
@@ -138,7 +146,7 @@ class SimpleModelTrainer:
                 X, y, test_size=test_size, random_state=random_state
             )
 
-            # Log dataset information
+            # Log dataset and GPU information
             mlflow.log_params(
                 {
                     "dataset_size": len(df),
@@ -148,15 +156,18 @@ class SimpleModelTrainer:
                     "target_column": target_col,
                     "test_split_ratio": test_size,
                     "random_state": random_state,
+                    "gpu_available": gpu_info["gpu_available"],
+                    "gpu_devices": len(gpu_info.get("devices", [])),
+                    "torch_available": gpu_info.get("torch_available", False),
                 }
             )
 
-            # Initialize and train model
-            model = SimpleClimatePredictor(
+            # Initialize and train model with GPU support
+            model = GPUAcceleratedClimatePredictor(
                 model_dir=str(self.model_dir), random_state=random_state
             )
 
-            logger.info("Training model")
+            logger.info("Training model with GPU acceleration")
             training_results = model.fit(X_train, y_train)
 
             # Make predictions
@@ -176,32 +187,45 @@ class SimpleModelTrainer:
             for metric, value in test_metrics.items():
                 mlflow.log_metric(f"test_{metric}", value)
 
-            # Log individual model performance
+            # Log individual model performance including GPU metrics
             for model_name, scores in training_results["model_scores"].items():
                 for metric, value in scores.items():
-                    mlflow.log_metric(f"{model_name}_{metric}", value)
+                    if metric != "gpu_accelerated":  # Skip boolean values
+                        mlflow.log_metric(f"{model_name}_{metric}", value)
+                    else:
+                        mlflow.log_param(f"{model_name}_gpu_accelerated", value)
+
+            # Log training times per model
+            if "training_times" in training_results:
+                for model_name, time_taken in training_results[
+                    "training_times"
+                ].items():
+                    mlflow.log_metric(f"{model_name}_training_time", time_taken)
+
+            # Log GPU information
+            mlflow.log_param(
+                "gpu_models_used", training_results.get("models_trained", [])
+            )
 
             # Log feature importance
             feature_importance = model.get_feature_importance()
             if feature_importance:
                 for model_name, importance in feature_importance.items():
-                    for i, (feature, imp) in enumerate(
-                        zip(features, importance)
-                    ):  # noqa: E501
-                        mlflow.log_metric(f"{model_name}_feature_{i}", imp)
+                    for i, (feature, imp) in enumerate(zip(features, importance)):
+                        mlflow.log_metric(f"{model_name}_feature_{feature}", imp)
 
             # Log timing
-            mlflow.log_metric("training_time_seconds", training_time)
+            mlflow.log_metric("total_training_time_seconds", training_time)
 
             # Save and log model
-            model_filename = f"simple_climate_model_{run.info.run_id}.joblib"
+            model_filename = f"gpu_climate_model_{run.info.run_id}.joblib"
             model.save_model(model_filename)
 
             # Log model to MLflow
             mlflow.sklearn.log_model(
                 model,
                 "climate_model",
-                registered_model_name="simple-climate-predictor",  # noqa: E501
+                registered_model_name="gpu-climate-predictor",
             )
 
             # Prepare results
