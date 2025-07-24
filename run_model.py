@@ -431,7 +431,7 @@ class ClimateReportGenerator:
                     <ul>
                         <li><strong>MAE (Mean Absolute Error):</strong> On average, our predictions are off by {results['test_metrics']['mae']:.2f}°C</li>  # noqa: E501
                         <li><strong>RMSE (Root Mean Square Error):</strong> Penalizes larger errors more heavily, giving us {results['test_metrics']['rmse']:.2f}°C</li>  # noqa: E501
-                        <li><strong>R² Score:</strong> Explains {results['test_metrics']['r2']*100:.1f}% of the variance in temperature data</li>  # noqa: E501
+                        <li><strong>R² Score:</strong> Explains {results['test_metrics']['r2'] * 100:.1f}% of the variance in temperature data</li>  # noqa: E501
                     </ul>
                 </div>
 
