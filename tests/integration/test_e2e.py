@@ -8,10 +8,10 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
-from src.data.ingestion import NASAEarthDataClient
-from src.data.preprocessing import ClimateDataPreprocessor
-from src.models.climate_model import ClimatePredictor
-from src.models.training import ClimateModelTrainer
+from src.data.ingestion import NOAAClimateDataClient
+from src.data.preprocessing import SimpleClimatePreprocessor
+from src.models.climate_model import SimpleSimpleClimatePredictor
+from src.models.training import SimpleModelTrainer
 
 
 class TestEndToEndPipeline:
@@ -42,7 +42,7 @@ class TestEndToEndPipeline:
         
         # 1. Data Ingestion
         print("Step 1: Data Ingestion")
-        client = NASAEarthDataClient(
+        client = NOAAClimateDataClient(
             data_dir=str(temp_workspace["data_dir"] / "raw")
         )
         
@@ -51,7 +51,7 @@ class TestEndToEndPipeline:
         end_date = "2023-01-10"  # Small date range for fast testing
         
         # Fetch climate indicators
-        data = client.fetch_climate_indicators(start_date, end_date, bbox)
+        data = client.fetch_climate_data(start_date, end_date, bbox)
         
         # Verify data ingestion
         assert isinstance(data, dict)
@@ -66,12 +66,12 @@ class TestEndToEndPipeline:
         
         # 2. Data Preprocessing
         print("Step 2: Data Preprocessing")
-        preprocessor = ClimateDataPreprocessor(
+        preprocessor = SimpleClimatePreprocessor(
             data_dir=str(temp_workspace["data_dir"])
         )
         
         # Create training data
-        df, features = preprocessor.create_training_data(
+        df, features = preprocessor.prepare_training_data(
             start_date, end_date, target_col="LST_Day_C"
         )
         
@@ -92,7 +92,7 @@ class TestEndToEndPipeline:
         
         # 3. Model Training
         print("Step 3: Model Training")
-        predictor = ClimatePredictor(
+        predictor = SimpleClimatePredictor(
             model_dir=str(temp_workspace["model_dir"]),
             random_state=42
         )
@@ -147,7 +147,7 @@ class TestEndToEndPipeline:
         print("Step 6: Model Loading and Inference")
         
         # Create new predictor instance and load model
-        new_predictor = ClimatePredictor(
+        new_predictor = SimpleClimatePredictor(
             model_dir=str(temp_workspace["model_dir"])
         )
         new_predictor.load_model(model_filename)
@@ -181,12 +181,12 @@ class TestEndToEndPipeline:
         print("Integration test completed successfully!")
 
     def test_trainer_integration(self, temp_workspace):
-        """Test the integrated training pipeline using ClimateModelTrainer."""
+        """Test the integrated training pipeline using SimpleModelTrainer."""
         
-        print("Testing ClimateModelTrainer integration")
+        print("Testing SimpleModelTrainer integration")
         
         # Initialize trainer
-        trainer = ClimateModelTrainer(
+        trainer = SimpleModelTrainer(
             data_dir=str(temp_workspace["data_dir"]),
             model_dir=str(temp_workspace["model_dir"]),
             experiment_name="test-integration"
@@ -224,7 +224,7 @@ class TestEndToEndPipeline:
         assert model_path.exists()
         
         print(f"Training completed: Test MAE = {results['test_metrics']['mae']:.3f}")
-        print("ClimateModelTrainer integration test passed!")
+        print("SimpleModelTrainer integration test passed!")
 
     def test_data_pipeline_consistency(self, temp_workspace):
         """Test consistency of data pipeline across multiple runs."""
@@ -236,13 +236,13 @@ class TestEndToEndPipeline:
         start_date = "2023-01-01"
         end_date = "2023-01-03"
         
-        client = NASAEarthDataClient(
+        client = NOAAClimateDataClient(
             data_dir=str(temp_workspace["data_dir"] / "raw")
         )
         
         # Run data ingestion twice
-        data1 = client.fetch_climate_indicators(start_date, end_date, bbox)
-        data2 = client.fetch_climate_indicators(start_date, end_date, bbox)
+        data1 = client.fetch_climate_data(start_date, end_date, bbox)
+        data2 = client.fetch_climate_data(start_date, end_date, bbox)
         
         # Verify consistency (since we use random seed, results should be similar)
         for dataset_name in data1.keys():
@@ -267,24 +267,24 @@ class TestEndToEndPipeline:
         print("Testing model performance thresholds")
         
         # Quick training with minimal data
-        client = NASAEarthDataClient(
+        client = NOAAClimateDataClient(
             data_dir=str(temp_workspace["data_dir"] / "raw")
         )
         
         # Generate data
         bbox = (-120, 35, -115, 40)
-        data = client.fetch_climate_indicators("2023-01-01", "2023-01-15", bbox)
+        data = client.fetch_climate_data("2023-01-01", "2023-01-15", bbox)
         
         # Preprocess
-        preprocessor = ClimateDataPreprocessor(
+        preprocessor = SimpleClimatePreprocessor(
             data_dir=str(temp_workspace["data_dir"])
         )
-        df, features = preprocessor.create_training_data(
+        df, features = preprocessor.prepare_training_data(
             "2023-01-01", "2023-01-15", target_col="LST_Day_C"
         )
         
         # Train model
-        predictor = ClimatePredictor(random_state=42)
+        predictor = SimpleClimatePredictor(random_state=42)
         X = df[features]
         y = df["LST_Day_C"]
         

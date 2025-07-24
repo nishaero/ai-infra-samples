@@ -43,11 +43,17 @@ class SimpleClimatePreprocessor:
         """
         data = {}
         
-        # Load temperature data
-        temp_file = self.raw_dir / f"temperature_{start_date}_{end_date}.csv"
-        if temp_file.exists():
-            data["temperature"] = pd.read_csv(temp_file, parse_dates=["date"])
-            logger.info(f"Loaded temperature data: {len(data['temperature'])} records")
+        # Load temperature data (try NOAA format first, then fallback to old format)
+        temp_files = [
+            self.raw_dir / f"noaa_temperature_{start_date}_{end_date}.csv",
+            self.raw_dir / f"temperature_{start_date}_{end_date}.csv"
+        ]
+        
+        for temp_file in temp_files:
+            if temp_file.exists():
+                data["temperature"] = pd.read_csv(temp_file, parse_dates=["date"])
+                logger.info(f"Loaded temperature data from {temp_file.name}: {len(data['temperature'])} records")
+                break
         
         # Load precipitation data  
         precip_file = self.raw_dir / f"precipitation_{start_date}_{end_date}.csv"
