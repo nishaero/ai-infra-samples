@@ -42,16 +42,67 @@ The project implements a complete MLOps pipeline with the following components:
 
 ### Prerequisites
 - Python 3.9+
-- Docker and Docker Compose
-- AWS CLI configured
-- Terraform installed
+- Docker and Docker Compose (for cloud deployment)
+- AWS CLI configured (for cloud deployment)
+- Terraform installed (for infrastructure)
 
-### Installation
+### Local Model Execution
+
+To run the climate prediction model locally and generate visualizations:
+
 ```bash
 # Clone the repository
 git clone https://github.com/nishaero/ai-infra-samples.git
 cd ai-infra-samples
 
+# Set up Python environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements/base.txt
+
+# Run the model with default parameters
+python run_model.py
+
+# Or with custom parameters
+python run_model.py --start-date 2023-01-01 --end-date 2023-06-30 --bbox -125 30 -110 45 --output-dir ./results
+```
+
+#### What the Local Run Does:
+1. 🌍 **Fetches Real Climate Data**: Downloads temperature and precipitation data from NOAA
+2. 🤖 **Trains ML Models**: Trains Linear Regression + Random Forest ensemble
+3. 📊 **Generates Predictions**: Creates temperature predictions and evaluates performance  
+4. 📈 **Creates Visualizations**: Generates 5+ plots showing model performance
+5. 📄 **Produces HTML Report**: Creates comprehensive report with plots and explanations
+
+#### Output Files:
+```
+output/
+├── climate_prediction_report.html    # Main report (open in browser)
+└── plots/
+    ├── actual_vs_predicted.png       # Prediction accuracy
+    ├── residuals.png                 # Error analysis
+    ├── feature_importance.png        # Important features
+    ├── model_comparison.png          # Model performance
+    └── temperature_distribution.png  # Data distribution
+```
+
+#### View Results:
+```bash
+# Open the HTML report in your browser
+open output/climate_prediction_report.html  # macOS
+# or
+start output/climate_prediction_report.html  # Windows
+# or  
+xdg-open output/climate_prediction_report.html  # Linux
+```
+
+### Cloud Development Setup
+
+For full MLOps pipeline development:
+
+```bash
 # Set up the environment
 make setup
 
@@ -83,6 +134,7 @@ make dev
 
 ## Documentation
 
+- **[Local Model Execution Guide](LOCAL_README.md)** - Run the model locally with visualizations
 - [Cloud Setup Guide](docs/cloud-setup.md) - AWS and infrastructure setup
 - [Architecture Documentation](docs/architecture.md) - System design details
 - [Deployment Guide](docs/deployment.md) - Production deployment instructions

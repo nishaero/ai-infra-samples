@@ -64,6 +64,11 @@ data/external/
 *.h5
 *.hdf5
 
+# Output directories
+output/
+test_output/
+results/
+
 # Model artifacts (saved models, not source code)
 /models/
 *.pkl
