@@ -71,7 +71,7 @@ python run_model.py --start-date 2023-01-01 --end-date 2023-06-30 --bbox -125 30
 ```
 
 #### What the Local Run Does:
-1. 🌍 **Fetches Real Climate Data**: Downloads temperature and precipitation data from NOAA
+1. 🌍 **Fetches Real Climate Data**: Downloads temperature and precipitation data from ESA Climate Data Portal
 2. 🤖 **Trains ML Models**: Trains Linear Regression + Random Forest ensemble
 3. 📊 **Generates Predictions**: Creates temperature predictions and evaluates performance  
 4. 📈 **Creates Visualizations**: Generates 5+ plots showing model performance
@@ -206,5 +206,5 @@ This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) 
 
 ## Acknowledgments
 
-- NASA Earth Data for providing satellite observation data
+- ESA Climate Data Portal and Copernicus Climate Data Store for providing satellite observation data
 - The open-source ML community for the tools and frameworks used

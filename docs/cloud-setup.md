@@ -84,32 +84,41 @@ Verify the configuration:
 aws sts get-caller-identity
 ```
 
-## NASA Earthdata Setup
+## ESA Climate Data Portal Setup
 
-### 1. Create NASA Earthdata Account
+### 1. Register for ESA Climate Data Access
 
-1. Go to [NASA Earthdata Login](https://urs.earthdata.nasa.gov/)
-2. Click "Register for a profile"
-3. Fill out the registration form
-4. Verify your email address
-5. Complete your profile information
+1. Go to [ESA Climate Data Portal](https://climate.esa.int/)
+2. Navigate to "Data" section and select datasets
+3. For Copernicus Climate Data Store access:
+   - Go to [Copernicus Climate Data Store](https://cds.climate.copernicus.eu/)
+   - Click "Register" to create an account
+   - Verify your email address
+   - Complete your profile information
 
-### 2. Configure NASA Earthdata Credentials
+### 2. Configure ESA/Copernicus Credentials
 
-Set up environment variables for NASA Earthdata access:
+Set up environment variables for Copernicus Climate Data Store access:
 
 ```bash
 # Add to your shell profile (.bashrc, .zshrc, etc.)
-export EARTHDATA_USERNAME="your_nasa_username"
-export EARTHDATA_PASSWORD="your_nasa_password"
+export CDS_API_URL="https://cds.climate.copernicus.eu/api/v2"
+export CDS_API_KEY="your_cds_api_key"
 ```
 
 Or create a `.env` file in the project root:
 ```bash
 # .env file
-EARTHDATA_USERNAME=your_nasa_username
-EARTHDATA_PASSWORD=your_nasa_password
+CDS_API_URL=https://cds.climate.copernicus.eu/api/v2
+CDS_API_KEY=your_cds_api_key
 ```
+
+### 3. Get Your CDS API Key
+
+1. Log in to your [Copernicus Climate Data Store account](https://cds.climate.copernicus.eu/user/login)
+2. Go to your user profile page
+3. Copy your API key from the "API key" section
+4. The key format is: `{uid}:{api-key}`
 
 ## Project Setup
 
@@ -146,8 +155,8 @@ AWS_REGION=us-west-2
 AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
 
-EARTHDATA_USERNAME=your_nasa_username
-EARTHDATA_PASSWORD=your_nasa_password
+CDS_API_URL=https://cds.climate.copernicus.eu/api/v2
+CDS_API_KEY=your_cds_api_key
 
 # Database configuration (will be created by Terraform)
 DB_USERNAME=airflow
@@ -268,8 +277,7 @@ In your GitHub repository, add the following secrets:
 ```
 AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
-EARTHDATA_USERNAME=your_nasa_username
-EARTHDATA_PASSWORD=your_nasa_password
+CDS_API_KEY=your_cds_api_key
 ```
 
 ### 2. Trigger CI/CD Pipeline
