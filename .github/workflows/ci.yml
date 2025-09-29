@@ -1,14 +1,11 @@
 name: CI - Continuous Integration
-
 on:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
-
 env:
   PYTHON_VERSION: '3.9'
-
 jobs:
   lint:
     name: Code Linting
@@ -46,7 +43,6 @@ jobs:
     
     - name: Run mypy type checking
       run: mypy src/
-
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -101,7 +97,6 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
-
   integration-test:
     name: Integration Tests
     runs-on: ubuntu-latest
@@ -153,7 +148,6 @@ jobs:
       run: |
         docker build -f docker/Dockerfile.api -t climate-prediction-api:test .
         docker build -f docker/Dockerfile.training -t climate-prediction-training:test .
-
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
@@ -188,7 +182,6 @@ jobs:
       with:
         name: bandit-report
         path: bandit-report.json
-
   terraform-validate:
     name: Terraform Validation
     runs-on: ubuntu-latest
@@ -199,7 +192,7 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
       with:
-        terraform_version: 1.0.0
+        terraform_version: 1.6.0
     
     - name: Terraform Format Check
       run: terraform fmt -check -recursive infrastructure/terraform/
@@ -213,7 +206,6 @@ jobs:
       run: |
         cd infrastructure/terraform
         terraform validate
-
   docker-security:
     name: Docker Security Scan
     runs-on: ubuntu-latest
@@ -246,7 +238,6 @@ jobs:
       if: always()
       with:
         sarif_file: 'trivy-api-results.sarif'
-
   documentation:
     name: Documentation Check
     runs-on: ubuntu-latest
@@ -279,7 +270,6 @@ jobs:
         test -f README.md || exit 1
         test -d docs/ || exit 1
         echo "Documentation structure validated"
-
   validate-project:
     name: Project Validation
     runs-on: ubuntu-latest
