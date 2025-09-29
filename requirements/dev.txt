@@ -17,7 +17,8 @@ pre-commit==3.8.0
 # Testing utilities
 httpx==0.27.0
 factory-boy==3.3.1
-responses==0.25.3
+# Fixed version conflicts: responses compatible with urllib3 constraints
+responses==0.24.1
 
 # Documentation
 sphinx==7.4.7
@@ -28,6 +29,6 @@ jupyter==1.0.0
 jupyterlab==4.2.5
 ipykernel==6.29.5
 
-# Additional type stubs
-types-requests==2.32.0.20240712
+# Additional type stubs - removed problematic urllib3 constraint
+# types-requests==2.32.0.20240712  # Conflicts with urllib3 constraints
 types-PyYAML==6.0.12.20240808
