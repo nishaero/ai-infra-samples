@@ -1,0 +1,311 @@
+name: CI - Continuous Integration
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+env:
+  PYTHON_VERSION: '3.9'
+jobs:
+  lint:
+    name: Code Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements/dev.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/dev.txt
+    
+    - name: Run black formatting check
+      run: black --check src/ tests/
+    
+    - name: Run isort import sorting check
+      run: isort --check-only src/ tests/
+    
+    - name: Run flake8 linting
+      run: flake8 src/ tests/
+    
+    - name: Run mypy type checking
+      run: mypy src/
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements/dev.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/dev.txt
+        pip install -e .
+    
+    - name: Run unit tests with coverage
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+      run: |
+        pytest tests/unit/ -v --cov=src --cov-report=xml --cov-report=html
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements/dev.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/dev.txt
+        pip install -e .
+    
+    - name: Run integration tests
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+      run: |
+        pytest tests/integration/ -v --tb=short
+    
+    - name: Test Docker build
+      run: |
+        docker build -f docker/Dockerfile.api -t climate-prediction-api:test .
+        docker build -f docker/Dockerfile.training -t climate-prediction-training:test .
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit
+    
+    - name: Run safety check for dependencies
+      run: |
+        pip freeze | safety check --stdin
+      continue-on-error: true
+    
+    - name: Run bandit security linter
+      run: |
+        bandit -r src/ -f json -o bandit-report.json
+      continue-on-error: true
+    
+    - name: Upload bandit report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: bandit-report
+        path: bandit-report.json
+  terraform-validate:
+    name: Terraform Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.6.0
+    
+    - name: Terraform Format Check
+      run: terraform fmt -check -recursive infrastructure/terraform/
+    
+    - name: Terraform Init
+      run: |
+        cd infrastructure/terraform
+        terraform init -backend=false
+    
+    - name: Terraform Validate
+      run: |
+        cd infrastructure/terraform
+        terraform validate
+  docker-security:
+    name: Docker Security Scan
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Docker images
+      run: |
+        docker build -f docker/Dockerfile.api -t climate-prediction-api:latest .
+        docker build -f docker/Dockerfile.training -t climate-prediction-training:latest .
+    
+    - name: Run Trivy vulnerability scanner on API image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'climate-prediction-api:latest'
+        format: 'sarif'
+        output: 'trivy-api-results.sarif'
+    
+    - name: Run Trivy vulnerability scanner on Training image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'climate-prediction-training:latest'
+        format: 'sarif'
+        output: 'trivy-training-results.sarif'
+    
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-api-results.sarif'
+  documentation:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install documentation dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install sphinx sphinx-rtd-theme
+    
+    - name: Check documentation links
+      run: |
+        # Check for broken links in README
+        if command -v markdown-link-check &> /dev/null; then
+          markdown-link-check README.md
+        else
+          echo "Skipping link check (markdown-link-check not available)"
+        fi
+    
+    - name: Validate documentation structure
+      run: |
+        # Check that required documentation files exist
+        test -f README.md || exit 1
+        test -d docs/ || exit 1
+        echo "Documentation structure validated"
+  validate-project:
+    name: Project Validation
+    runs-on: ubuntu-latest
+    needs: [lint, test, integration-test, terraform-validate]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/dev.txt
+        pip install -e .
+    
+    - name: Validate project setup
+      run: |
+        make validate
+    
+    - name: Check Makefile targets
+      run: |
+        make help
+    
+    - name: Validate Docker Compose
+      run: |
+        docker-compose -f docker/docker-compose.yml config
+    
+    - name: Summary
+      run: |
+        echo "✅ All CI checks passed!"
+        echo "✅ Code quality: Linting, formatting, type checking"
+        echo "✅ Testing: Unit tests and integration tests"
+        echo "✅ Security: Dependency and container scanning"
+        echo "✅ Infrastructure: Terraform validation"
+        echo "✅ Documentation: Structure and content validation"

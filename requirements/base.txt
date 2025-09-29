@@ -1,0 +1,54 @@
+# Core dependencies
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.5.2
+xgboost==2.1.1
+lightgbm==4.5.0
+
+# GPU support (optional - install with GPU-enabled versions for GPU containers)
+# torch>=2.0.0  # For PyTorch GPU support
+# cudf-cu12>=24.0.0  # For RAPIDS GPU-accelerated dataframes
+# cuml-cu12>=24.0.0  # For RAPIDS GPU-accelerated ML
+
+# Data processing
+requests==2.32.3
+netCDF4==1.7.1
+xarray==2024.6.0
+h5py==3.12.1
+
+# ML and experiment tracking
+mlflow==2.16.2
+optuna==4.0.0
+
+# API framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.0
+
+# Monitoring
+prometheus_client==0.21.0
+psutil==6.0.0
+
+# Cloud and infrastructure
+boto3==1.35.30
+botocore==1.35.30
+
+# Workflow orchestration
+apache-airflow==2.10.0
+apache-airflow-providers-amazon==8.26.0
+
+# Time series
+statsmodels==0.14.4
+prophet==1.1.5
+
+# Visualization
+matplotlib==3.9.2
+seaborn==0.13.2
+plotly==5.24.1
+
+# Utilities
+python-dotenv==1.0.1
+pyyaml==6.0.2
+click==8.1.7
+tqdm==4.66.6
+joblib==1.4.2
